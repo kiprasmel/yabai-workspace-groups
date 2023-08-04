@@ -1,0 +1,6 @@
+#!/bin/sh
+
+#
+yabai -m query --displays
+yabai -m query --spaces
+yabai -m query --windows

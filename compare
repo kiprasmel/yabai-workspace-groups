@@ -1,0 +1,43 @@
+#!/bin/sh
+
+USAGE="\
+usage:
+compare A.json B.json [.spaces|.displays|.windows]
+
+"
+
+[ -z "$2" ] && {
+	printf "$USAGE"
+	exit 1
+}
+
+F1="$1"
+shift
+F2="$1"
+shift
+
+SELECTOR=".spaces"
+[ -n "$1" ] && {
+	SELECTOR="$1"
+	shift
+}
+
+OUTDIR="$(mktemp -d)"
+FSP1="$OUTDIR/$F1.sp"
+FSP2="$OUTDIR/$F2.sp"
+# cat "$F1" | jq --sort-keys ".$SELECTOR" > "$FSP1"
+# cat "$F2" | jq --sort-keys ".$SELECTOR" > "$FSP2"
+
+# compare by index
+#cat "$F1" | jq ".$SELECTOR | . |= sort_by(.index)" > "$FSP1"
+#cat "$F2" | jq ".$SELECTOR | . |= sort_by(.index)" > "$FSP2"
+
+# compare by uuid, so that the diff won't be impacted if the items were moved around.
+cat "$F1" | jq "$SELECTOR | . |= sort_by(.uuid)" > "$FSP1"
+cat "$F2" | jq "$SELECTOR | . |= sort_by(.uuid)" > "$FSP2"
+
+printf "$OUTDIR\n"
+
+# /usr/bin/env diff -u "$FSP1" "$FSP2" | diff-so-fancy
+# /usr/bin/env jd "$FSP1" "$FSP2"
+/usr/bin/env json-diff -f $* "$FSP1" "$FSP2"
