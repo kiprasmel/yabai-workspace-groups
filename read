@@ -1,6 +1,8 @@
 #!/bin/sh
 
 #
-yabai -m query --displays
-yabai -m query --spaces
-yabai -m query --windows
+# yabai -m query --displays
+# yabai -m query --spaces
+# yabai -m query --windows
+
+curl -L localhost:19420/api/v1/read 2>/dev/null
