@@ -2,7 +2,7 @@
 
 USAGE="\
 usage:
-compare CURRENT.json TARGET.json
+compare TARGET.json  CURRENT.json
 compare TARGET.json [CURRENT.json=./read]
 
 "
@@ -21,20 +21,20 @@ OUTDIR="$(mktemp -d)"
 log "$OUTDIR"
 
 if [ -n "$2" ]; then
-	F1="$1"
-	F2="$2"
+	TARGET="$1"
+	CURRENT="$2"
 	shift
 	shift
 else
-	F1="$1"
+	TARGET="$1"
 	shift
 
-	F2="${OUTDIR}/CURRENT.json"
-	./read > "$F2"
+	CURRENT="${OUTDIR}/CURRENT.json"
+	./read > "$CURRENT"
 fi
 
-F1="$(realpath "$F1")"
-F2="$(realpath "$F2")"
+TARGET="$(realpath "$TARGET")"
+CURRENT="$(realpath "$CURRENT")"
 
 # TODO: do for windows too.
 # currently sorting does not work since don't have UUID; maybe should use pid instead?
@@ -48,28 +48,25 @@ perform_compare_for_selector() {
 	local SELECTOR="$1"
 	log "$SELECTOR:"
 
-	F1base="$(basename "$F1")"
-	F2base="$(basename "$F2")"
-	FSP1="${OUTDIR}/${F1base}${SELECTOR}.json"
-	FSP2="${OUTDIR}/${F2base}${SELECTOR}.json"
+	TARGETbase="$(basename "$TARGET")"
+	CURRENTbase="$(basename "$CURRENT")"
+	TARGET_SELECTOR="${OUTDIR}/${TARGETbase}${SELECTOR}.json"
+	CURRENT_SELECTOR="${OUTDIR}/${CURRENTbase}${SELECTOR}.json"
 
-	# cat "$F1" | jq --sort-keys ".$SELECTOR" > "$FSP1"
-	# cat "$F2" | jq --sort-keys ".$SELECTOR" > "$FSP2"
+	# cat "$TARGET" | jq --sort-keys ".$SELECTOR" > "$TARGET_SELECTOR"
+	# cat "$CURRENT" | jq --sort-keys ".$SELECTOR" > "$CURRENT_SELECTOR"
 
 	# compare by index
-	#cat "$F1" | jq ".$SELECTOR | . |= sort_by(.index)" > "$FSP1"
-	#cat "$F2" | jq ".$SELECTOR | . |= sort_by(.index)" > "$FSP2"
+	#cat "$TARGET" | jq ".$SELECTOR | . |= sort_by(.index)" > "$TARGET_SELECTOR"
+	#cat "$CURRENT" | jq ".$SELECTOR | . |= sort_by(.index)" > "$CURRENT_SELECTOR"
 
 	# compare by uuid, so that the diff won't be impacted if the items were moved around.
-	# cat "$F1" | jq "$SELECTOR | . |= sort_by(.uuid)" > "$FSP1"
-	# cat "$F2" | jq "$SELECTOR | . |= sort_by(.uuid)" > "$FSP2"
-	cat "$F1" | jq "$SELECTOR | sort_by(.uuid)" > "$FSP1"
-	cat "$F2" | jq "$SELECTOR | sort_by(.uuid)" > "$FSP2"
+	# cat "$TARGET" | jq "$SELECTOR | . |= sort_by(.uuid)" > "$TARGET_SELECTOR"
+	# cat "$CURRENT" | jq "$SELECTOR | . |= sort_by(.uuid)" > "$CURRENT_SELECTOR"
+	cat "$TARGET" | jq "$SELECTOR | sort_by(.uuid)" > "$TARGET_SELECTOR"
+	cat "$CURRENT" | jq "$SELECTOR | sort_by(.uuid)" > "$CURRENT_SELECTOR"
 
-	# /usr/bin/env diff -u "$FSP1" "$FSP2" | diff-so-fancy
-	# /usr/bin/env jd "$FSP1" "$FSP2"
-
-	/usr/bin/env json-diff -f "$FSP1" "$FSP2" -C
+	/usr/bin/env json-diff -f "$CURRENT_SELECTOR" "$TARGET_SELECTOR" -C
 }
 
 for selector in "${SELECTORS[@]}"; do

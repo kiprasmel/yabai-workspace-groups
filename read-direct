@@ -1,0 +1,7 @@
+#!/bin/sh
+
+DISPLAYS="$(yabai -m query --displays)"
+SPACES="$(yabai -m query --spaces)"
+WINDOWS="$(yabai -m query --windows)"
+
+printf '{"displays":%s,"SPACES":%s,"windows":%s}\n' "$DISPLAYS" "$SPACES" "$WINDOWS"
