@@ -17,34 +17,49 @@ function reconcile({ targetFile }) {
 	const currentDisplaysSpaces = currentDisplays.map(x => x.spaces)
 	console.log({ targetDisplays, currentDisplays, targetDisplaysSpaces, currentDisplaysSpaces })
 
-	const spacesToMoveToDesktop = []
-	/**
-	 * TODO: validate still works with various {current|target}Displays counts (1-1, 1-many, many-1, many-many)
-	 */
-	for (let i = 0; i < targetDisplays.length; i++) {
-		const targetDisplay = targetDisplays[i]
-		
-		let currentDisplay = currentDisplays.find(curr => curr.uuid === targetDisplay.uuid)
-
-		if (!currentDisplay) {
-			if (currentDisplays.length === 1) {
-				currentDisplay = currentDisplays[0]
-			} else {
-				const msg = `have multiple current displays, and none of them matched the target display. target = ${targetDisplay.uuid}`
+	const currentSpaceToDisplayMap = new Map()
+	for (const display of currentDisplays) {
+		for (const space of display.spaces) {
+			if (currentSpaceToDisplayMap.has(space)) {
+				const existingDisplay = currentSpaceToDisplayMap.get(space)
+				const msg = `space idx ${space} already exists in display ${existingDisplay}`
 				throw new Termination(msg)
 			}
-		}
 
-		/**
-		 * what spaces to move out of the currentDisplay into targetDisplay,
-		 * what spaces to move out of the targetDisplay into somewhere else
-		 */
-		const spacesDelta = TODO()
+			currentSpaceToDisplayMap.set(space, display.uuid)
+		}
 	}
 
+	const spacesToMoveToDesktop = []
+	for (let i = 0; i < targetDisplays.length; i++) {
+		const targetDisplay = targetDisplays[i]
 
-	for (const space of spacesToMoveToDesktop) {
-		moveSpaceToDesktop(space)
+		for (const space of targetDisplay.spaces) {
+			const currDisplayUUID = currentSpaceToDisplayMap.get(space)
+			const needsToBeMoved = currDisplayUUID !== targetDisplay.uuid
+
+			if (needsToBeMoved) {
+				spacesToMoveToDesktop.push([space, targetDisplay.uuid])
+			}
+		}
+	}
+
+	console.log({ spacesToMoveToDesktop })
+
+	/**
+	 * TODO: what to do if display is not available?
+	 * e.g. user selected some config w/ 2 monitors, but 1 is unplugged.
+	 */
+
+	for (const [space, displayUUID] of spacesToMoveToDesktop) {
+		const display = currentDisplays.find(x => x.uuid === displayUUID)
+
+		if (!display) {
+			const msg = `uuid of target display does not exist in current displays. ${displayUUID}`
+			throw new Termination(msg)
+		}
+
+		moveSpaceToDisplay(space, display.id)
 	}
 
 	const windowsToMoveToSpaces = []
@@ -65,8 +80,10 @@ function parseWorkspacesData({ targetFile }) {
 	}
 }
 
-function moveSpaceToDesktop(space) {
-	TODO()
+function moveSpaceToDisplay(space, display) {
+	const cmd = `yabai -m space ${space} --display ${display}`
+
+	cp.execSync(cmd)
 }
 
 function moveWindowToSpace(window) {
