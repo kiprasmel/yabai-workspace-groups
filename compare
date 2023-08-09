@@ -30,7 +30,7 @@ else
 	shift
 
 	CURRENT="${OUTDIR}/CURRENT.json"
-	./read > "$CURRENT"
+	./read-direct > "$CURRENT"
 fi
 
 TARGET="$(realpath "$TARGET")"
