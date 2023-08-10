@@ -143,8 +143,8 @@ function handleWindowsToSpaces(currentSpaces, targetSpaces, currentWindows, targ
 	console.log({ windowsWithMultipleMatch: windowsWithMultipleMatch.map(takeWindowKeys)})
 	console.log({ windowsToMoveToSpaces })
 
-	const currentUnhandledWindows = [...currentWindowToSpaceMap.keys()].map(id => currentWindows.find(x => x.id === id) || { NOT_FOUND: true, id }).map(takeWindowKeys)
-	console.log({ currentUnhandledWindows })
+	const currentUnhandledWindows = [...currentWindowToSpaceMap.keys()].map(id => currentWindows.find(x => x.id === id) || { NOT_FOUND: true, id })
+	console.log({ currentUnhandledWindows: currentUnhandledWindows.map(takeWindowKeys) })
 
 	for (const [window, spaceUUID] of windowsToMoveToSpaces) {
 		const space = currentSpaces.find(x => x.uuid === spaceUUID)
@@ -155,6 +155,18 @@ function handleWindowsToSpaces(currentSpaces, targetSpaces, currentWindows, targ
 		}
 
 		moveWindowToSpace(window, space.id)
+	}
+
+	/**
+	 * move to the last space - better than keeping a mess in existing spaces
+	 * 
+	 * or is it? e.g. if window couldn't be matched, but was in correct place already?
+	 * 
+	 * maybe need to ask user - what they want to do.
+	 */
+	const lastCurrentSpace = currentSpaces[currentSpaces.length - 1]
+	for (const window of currentUnhandledWindows) {
+		moveWindowToSpace(window.id, lastCurrentSpace.index)
 	}
 }
 
