@@ -175,14 +175,14 @@ function parseWorkspacesData({ targetFile }) {
 	}
 }
 
-function moveSpaceToDisplay(space, display) {
-	const cmd = `yabai -m space ${space} --display ${display}`
+function moveSpaceToDisplay(spaceID, displayID) {
+	const cmd = `yabai -m space ${spaceID} --display ${displayID}`
 
 	cp.execSync(cmd)
 }
 
-function moveWindowToSpace(window, space) {
-	const cmd = `yabai -m window ${window} --space ${space}`
+function moveWindowToSpace(windowID, spaceID) {
+	const cmd = `yabai -m window ${windowID} --space ${spaceID}`
 	console.log({cmd})
 
 	cp.execSync(cmd)
