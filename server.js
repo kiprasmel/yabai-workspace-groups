@@ -3,6 +3,7 @@
 const fs = require("fs")
 const path = require("path")
 const { execSync } = require("child_process")
+const util = require("util")
 
 const express = require("express")
 const cors = require("cors")
@@ -17,30 +18,22 @@ const execS = (cmd, extra) => execSync(cmd, { encoding: "utf-8", ...extra })
 
 app.get("/api/v1/read", async (_req, res) => {
 	try {
-		const current = readCurrent()
+		const current = readCurrentStringified()
 
-		// const data = {
-		// 	current,
-		// }
-		const data = current
-
-		return res.status(200).json(data)
+		return res.status(200).send(current)
 	} catch (err) {
 		console.error(err)
 		return res.status(500).json({ err })
 	}
 })
 
-function readCurrent() {
-	const displays = JSON.parse(execS("yabai -m query --displays"))
-	const spaces = JSON.parse(execS("yabai -m query --spaces"))
-	const windows = JSON.parse(execS("yabai -m query --windows"))
+function readCurrentStringified() {
+	const displays = execS("yabai -m query --displays")
+	const spaces = execS("yabai -m query --spaces")
+	const windows = execS("yabai -m query --windows")
 
-	const data = {
-		displays,
-		spaces,
-		windows,
-	}
+	/** see `read-direct` */
+	const data = util.format('{"displays":%s,"spaces":%s,"windows":%s}\n', displays, spaces, windows)
 
 	return data
 }
