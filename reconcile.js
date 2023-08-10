@@ -84,15 +84,22 @@ function handleWindowsToSpaces(currentSpaces, targetSpaces, currentWindows, targ
 
 	const windowsToMoveToSpaces = []
 	const windowsWithNoMatch = []
+	const windowsWithMultipleMatch = []
 	for (let i = 0; i < targetSpaces.length; i++) {
 		const targetSpace = targetSpaces[i]
 
 		for (const _window of targetSpace.windows) {
 			let currSpaceUUID
 			let windowID
-			if (currentWindowToSpaceMap.has(_window)) {
-				currSpaceUUID = currentWindowToSpaceMap.get(_window)
-				windowID = _window
+			const hasWindow = (id) => currentWindowToSpaceMap.has(id)
+			const takeWindow = (id) => {
+				currSpaceUUID = currentWindowToSpaceMap.get(id)
+				windowID = id
+				currentWindowToSpaceMap.delete(id)
+			}
+
+			if (hasWindow(_window)) {
+				takeWindow(_window)
 			} else {
 				/**
 				 * try matching by exact window title
@@ -109,15 +116,14 @@ function handleWindowsToSpaces(currentSpaces, targetSpaces, currentWindows, targ
 				const matchesCount = potentialMatchesInCurrent.length
 				if (matchesCount === 1) {
 					const matchedWindow = potentialMatchesInCurrent[0]
-					currSpaceUUID = currentWindowToSpaceMap.get(matchedWindow.id)
-					windowID = matchedWindow.id
+					takeWindow(matchedWindow.id)
 					// console.log(`found match for window ${_window} in space ${currSpaceUUID}.`, { targetTitle, matchedWindow })
 				} else if (matchesCount === 0) {
 					windowsWithNoMatch.push(targetWindowFull)
 					continue
 				} else {
 					/** found >1 match, thus no go */
-					windowsWithNoMatch.push(targetWindowFull)
+					windowsWithMultipleMatch.push(targetWindowFull)
 					continue
 				}
 			}
@@ -132,8 +138,13 @@ function handleWindowsToSpaces(currentSpaces, targetSpaces, currentWindows, targ
 		}
 	}
 
-	console.log({ windowsWithNoMatch: windowsWithNoMatch.map(takeKeys(["id", "pid", "app", "title"]))})
+	const takeWindowKeys = takeKeys(["id", "pid", "app", "title", "NOT_FOUND"])
+	console.log({ windowsWithNoMatch: windowsWithNoMatch.map(takeWindowKeys)})
+	console.log({ windowsWithMultipleMatch: windowsWithMultipleMatch.map(takeWindowKeys)})
 	console.log({ windowsToMoveToSpaces })
+
+	const currentUnhandledWindows = [...currentWindowToSpaceMap.keys()].map(id => currentWindows.find(x => x.id === id) || { NOT_FOUND: true, id }).map(takeWindowKeys)
+	console.log({ currentUnhandledWindows })
 
 	for (const [window, spaceUUID] of windowsToMoveToSpaces) {
 		const space = currentSpaces.find(x => x.uuid === spaceUUID)
