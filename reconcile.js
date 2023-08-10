@@ -26,14 +26,18 @@ function reconcile({ targetFile }) {
 function handleSpacesToDisplays(currentDisplays, targetDisplays) {
 	const currentSpaceToDisplayMap = new Map()
 	for (const display of currentDisplays) {
-		for (const space of display.spaces) {
-			if (currentSpaceToDisplayMap.has(space)) {
-				const existingDisplay = currentSpaceToDisplayMap.get(space)
-				const msg = `space idx ${space} already exists in display ${existingDisplay}`
+		for (const spaceIndex of display.spaces) {
+			if (currentSpaceToDisplayMap.has(spaceIndex)) {
+				const existingDisplay = currentSpaceToDisplayMap.get(spaceIndex)
+				const msg = `space idx ${spaceIndex} already exists in display ${existingDisplay}`
 				throw new Termination(msg)
 			}
 
-			currentSpaceToDisplayMap.set(space, display.uuid)
+			/**
+			 * TODO FIXME: shouldn't we have the `space.uuid` here, instead of `space.index`?
+			 * is this why the spaces/windows are going to incorrect places?
+			 */ 
+			currentSpaceToDisplayMap.set(spaceIndex, display.uuid)
 		}
 	}
 
@@ -41,19 +45,19 @@ function handleSpacesToDisplays(currentDisplays, targetDisplays) {
 	for (let i = 0; i < targetDisplays.length; i++) {
 		const targetDisplay = targetDisplays[i]
 
-		for (const space of targetDisplay.spaces) {
-			const currDisplayUUID = currentSpaceToDisplayMap.get(space)
+		for (const spaceIndex of targetDisplay.spaces) {
+			const currDisplayUUID = currentSpaceToDisplayMap.get(spaceIndex)
 			const needsToBeMoved = currDisplayUUID !== targetDisplay.uuid
 
 			if (needsToBeMoved) {
-				spacesToMoveToDesktop.push([space, targetDisplay.uuid])
+				spacesToMoveToDesktop.push([spaceIndex, targetDisplay.uuid])
 			}
 		}
 	}
 
 	console.log({ spacesToMoveToDesktop })
 
-	for (const [space, displayUUID] of spacesToMoveToDesktop) {
+	for (const [spaceIndex, displayUUID] of spacesToMoveToDesktop) {
 		const display = currentDisplays.find(x => x.uuid === displayUUID)
 
 		if (!display) {
@@ -61,7 +65,7 @@ function handleSpacesToDisplays(currentDisplays, targetDisplays) {
 			throw new Termination(msg)
 		}
 
-		moveSpaceToDisplay(space, display.id)
+		moveSpaceToDisplay(spaceIndex, display.id)
 	}
 }
 
@@ -187,14 +191,14 @@ function parseWorkspacesData({ targetFile }) {
 	}
 }
 
-function moveSpaceToDisplay(spaceID, displayID) {
-	const cmd = `yabai -m space ${spaceID} --display ${displayID}`
+function moveSpaceToDisplay(spaceIndex, displayID) {
+	const cmd = `yabai -m space ${spaceIndex} --display ${displayID}`
 
 	cp.execSync(cmd)
 }
 
-function moveWindowToSpace(windowID, spaceID) {
-	const cmd = `yabai -m window ${windowID} --space ${spaceID}`
+function moveWindowToSpace(windowID, spaceIndex) {
+	const cmd = `yabai -m window ${windowID} --space ${spaceIndex}`
 	console.log({cmd})
 
 	cp.execSync(cmd)
