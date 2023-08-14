@@ -16,11 +16,19 @@ app.use(express.json())
 
 const execS = (cmd, extra) => execSync(cmd, { encoding: "utf-8", ...extra })
 
-app.get("/api/v1/read", async (_req, res) => {
+app.get("/api/v1/read", async (req, res) => {
+	const shouldConvertToHierarchy = "hierarchy" in req.query
+
 	try {
 		const current = readCurrentStringified()
 
-		return res.status(200).send(current)
+		if (!shouldConvertToHierarchy) {
+			return res.status(200).send(current)
+		} else {
+			const currentParsed = JSON.parse(current)
+			const currentInHierarchy = convertToHierarchy(currentParsed)
+			return res.status(200).json(currentInHierarchy)
+		}
 	} catch (err) {
 		console.error(err)
 		return res.status(500).json({ err })
@@ -38,6 +46,37 @@ function readCurrentStringified() {
 	return data
 }
 
+/**
+ * @mutates data
+ */
+function convertToHierarchy(data) {
+	const stats = {
+		displays: data.displays.length,
+		spaces: data.spaces.length,
+		windows: data.windows.length,
+	}
+
+	/** convert windowIDs to full window objects */
+	data.spaces = data.spaces.map(space => Object.assign(space, {
+		windows: space.windows.map(windowId => {
+			return data.windows.find(window => window.id === windowId)
+		})
+	}))
+
+	/** convert spaceIndexes into full space objects */
+	data.displays = data.displays.map(display => Object.assign(display, {
+		spaces: display.spaces.map(spaceIndex => {
+			return data.spaces.find(space => space.index === spaceIndex)
+		})}
+	))
+
+	return {
+		/** root level (has everything else) */
+		displays: data.displays,
+		stats,
+	}
+}
+
 function store(data, filepath) {
 	const dirpath = path.dirname(filepath)
 
@@ -48,6 +87,9 @@ function store(data, filepath) {
 function readFromStored() {
 
 }
+
+/** serve static client */
+app.use(express.static(path.join(__dirname, "client")))
 
 function startServer({
 	PORT = process.env.PORT || 19420

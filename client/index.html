@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>yabai-workspace-groups</title>
+
+	<style>
+		#display-list {
+			min-height: 100px;
+			/* border: 1px solid #000000;
+			border-radius: 6px; */
+
+			display: flex;
+		}
+		#display-list > * + * {
+			margin-left: 1rem;
+		}
+		.display-item {
+			display: inline-block;
+			border: 2px solid #000000;
+			border-radius: 3px;
+
+			margin: 0.5rem;
+			padding: 0.5rem;
+		}
+
+		.space-list {
+			display: flex;
+		}
+		.space-item {
+
+			border: 2px solid #000000;
+			border-radius: 3px;
+
+			margin: 0.5rem;
+			padding: 0.5rem;
+		}
+
+		.window-list {
+			display: flex;
+		}
+		.window-item {
+
+			border: 2px solid #000000;
+			border-radius: 3px;
+
+			margin: 0.5rem;
+			padding: 0.5rem;
+
+			/** for indicator M if minimized */
+			position: relative;
+		}
+		.window-item--indicator-minimized {
+			position: absolute;
+			top: 0;
+			/* bottom: 0; */
+			right: 0;
+
+			background: rgba(0, 0, 0, 0.5);
+			color: white;
+			padding: 4px;
+			border-radius: 0px 0px 0px 4px;
+			/* border-radius: 4px 0px 0px 0px; */
+		}
+	</style>
+</head>
+<body>
+	<h1>yabai workspace groups</h1>
+
+	<main id="app"></main>
+
+	<!-- 
+		- https://preactjs.com/guide/v10/getting-started#no-build-tools-route
+		- https://preactjs.com/guide/v10/getting-started#alternatives-to-jsx
+		- https://stackoverflow.com/a/69905913/9285308
+	-->
+	<script type="module">
+		import * as preact from 'https://unpkg.com/preact@latest?module';
+		import { useState, useEffect } from 'https://unpkg.com/preact@latest/hooks/dist/hooks.module.js?module';
+		import htm from 'https://unpkg.com/htm?module';
+
+		const h = htm.bind(preact.h);
+
+		window.preact = preact;
+		window.h = h;
+		
+		function App() {
+			const data = useFetchInitData()
+		
+			if (!data) return null
+
+			const displayConfig = "current"
+
+			return h`<${Workspace} data=${data} config=${displayConfig} />`
+		}
+
+		const defaultInitData = {
+			displays: [],
+			spaces: [],
+			windows: []
+		}
+		function useFetchInitData() {
+			const [data, setData] = useState(null)
+
+			useEffect(() => {
+				fetch("http://localhost:19420/api/v1/read?hierarchy")
+					.then(res => res.json())
+					.then(data => setData(data))
+			}, [])
+
+			return data
+		}
+
+		/** our made up name */
+		function Workspace({ data, config }) {
+			const info = `${config} workspace: ${data.stats.displays} displays, ${data.stats.spaces} spaces, ${data.stats.windows} windows.`;
+
+			return h`
+				<h2>${info}</h2>
+
+				<ul id="display-list">
+					${data.displays.map(display => h`
+						<${Display} key=${display.uuid} display=${display} />
+					`)}
+				</ul>
+			`;
+		}
+
+		function Display({ display }) {
+			return h`
+				<div class="display-item">
+					<span>display ${display.uuid}</span>
+
+					<ul class="space-list">
+						${display.spaces.map(space => h`
+							<${Space} key=${space.uuid} space=${space} />
+						`)}
+					</ul>
+				</div>
+			`
+		}
+
+		function Space({ space }) {
+			return h`
+				<div class="space-item">
+					<span>${space.index}</span>
+
+					<ul class="window-list">
+						${space.windows.map(window => h`
+							<${Window} key=${window.id} window=${window} />
+						`)}
+					</ul>
+				</div>
+			`
+		}
+
+		function Window({ window }) {
+			return h`
+				<div class="window-item">
+					<span>${window.title}</span>
+
+					<${WindowIsMinimizedIndicator} isMinimized=${window["is-minimized"]} />
+				</div>
+			`
+		}
+
+		function WindowIsMinimizedIndicator({ isMinimized }) {
+			if (!isMinimized) {
+				return null
+			}
+
+			return h`
+				<span class="window-item--indicator-minimized" title="minimized">M</span>
+			`
+		}
+
+		preact.render(h`<${App} />`, document.querySelector("#app"));
+	</script>
+</body>
+</html>
