@@ -64,6 +64,13 @@
 			border-radius: 0px 0px 0px 4px;
 			/* border-radius: 4px 0px 0px 0px; */
 		}
+
+		.workspace-list {
+			display: flex;
+		}
+		.workspace-list > * + * {
+			margin-left: 0.5rem;
+		}
 	</style>
 </head>
 <body>
@@ -78,22 +85,67 @@
 	-->
 	<script type="module">
 		import * as preact from 'https://unpkg.com/preact@latest?module';
-		import { useState, useEffect } from 'https://unpkg.com/preact@latest/hooks/dist/hooks.module.js?module';
+		import { useState, useEffect, useContext, useMemo } from 'https://unpkg.com/preact@latest/hooks/dist/hooks.module.js?module';
 		import htm from 'https://unpkg.com/htm?module';
 
 		const h = htm.bind(preact.h);
 
 		window.preact = preact;
 		window.h = h;
+
+		const ContextWorkspaceForPotentialSwappingDefaultValue = { workspace: "", value: null }
+		const ContextWorkspaceForPotentialSwapping = preact.createContext(ContextWorkspaceForPotentialSwappingDefaultValue)
+		const useContextWorkspaceForPotentialSwapping = () => useContext(ContextWorkspaceForPotentialSwapping)
+		const ProviderWorkspaceForPotentialSwapping = ({ children }) => {
+			const [data, setData] = useState(ContextWorkspaceForPotentialSwappingDefaultValue)
+
+			function update(workspace, value) {
+				console.log("updating", { workspace, value });
+				setData({ workspace, value, update })
+			}
+
+			const dataMemo = useMemo(() => ({ ...data, update }), [data])
+
+			return h`
+				<${ContextWorkspaceForPotentialSwapping.Provider} value=${dataMemo}>
+					${children}
+				</${ContextWorkspaceForPotentialSwapping.Provider}>
+			`
+		}
+
+		function Contexts({ children }) {
+			return h`
+				<${ProviderWorkspaceForPotentialSwapping}>
+					${children}
+				</${ProviderWorkspaceForPotentialSwapping}>
+			`
+		}
+
+		function AppWrapper({ children }) {
+			return h`
+				<${Contexts}>
+					<${App}>
+						${children}
+					</${App}>
+				</${Contexts}>
+			`
+		}
 		
 		function App() {
 			const data = useFetchInitData()
+			const potentialSwappingWorkspaceData = useContextWorkspaceForPotentialSwapping()
 		
 			if (!data) return null
 
 			const displayConfig = "current"
 
-			return h`<${Workspace} data=${data} config=${displayConfig} />`
+			return h`
+				<${Workspace} data=${data} config=${displayConfig} />
+
+				<${AvailableWorkspaces} />
+
+				<${Workspace} data=${potentialSwappingWorkspaceData.value} config=${potentialSwappingWorkspaceData.workspace} />
+			`
 		}
 
 		const defaultInitData = {
@@ -113,9 +165,56 @@
 			return data
 		}
 
+		function AvailableWorkspaces() {
+			const workspaces = useFetchAvailableWorkspaces()
+			const potentialSwappingWorkspaceData = useContextWorkspaceForPotentialSwapping()
+
+			async function selectWorkspaceForPotentialSwapping(workspace) {
+				const data = await fetch(`http://localhost:19420/api/v1/read?hierarchy&workspace=${workspace}`)
+						.then(res => res.json())
+
+				potentialSwappingWorkspaceData.update(workspace, data)
+			}
+
+			if (!workspaces) {
+				return null
+			}
+
+			const info = `${workspaces.length} workspaces available:`
+
+			return h`
+				<h2>${info}</h2>
+
+				<ul class="workspace-list">
+					${workspaces.map(workspace => h`
+						<div>
+							<button onClick=${() => selectWorkspaceForPotentialSwapping(workspace)}>
+								${workspace}
+							</button>
+						</div>
+					`)}
+				</ul>
+			`
+		}
+		function useFetchAvailableWorkspaces() {
+			const [data, setData] = useState(null)
+
+			useEffect(() => {
+				fetch("http://localhost:19420/api/v1/list-workspaces")
+					.then(res => res.json())
+					.then(data => setData(data.workspaces))
+			}, [])
+
+			return data
+		}
+
 		/** our made up name */
 		function Workspace({ data, config }) {
-			const info = `${config} workspace: ${data.stats.displays} displays, ${data.stats.spaces} spaces, ${data.stats.windows} windows.`;
+			if (!data) {
+				return null
+			}
+
+			const info = `workspace "${config}": ${data.stats.displays} displays, ${data.stats.spaces} spaces, ${data.stats.windows} windows.`;
 
 			return h`
 				<h2>${info}</h2>
@@ -143,6 +242,7 @@
 		}
 
 		function Space({ space }) {
+			console.log({space});
 			return h`
 				<div class="space-item">
 					<span>${space.index}</span>
@@ -176,7 +276,7 @@
 			`
 		}
 
-		preact.render(h`<${App} />`, document.querySelector("#app"));
+		preact.render(h`<${AppWrapper} />`, document.querySelector("#app"));
 	</script>
 </body>
 </html>

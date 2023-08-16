@@ -194,14 +194,15 @@ function parseWorkspacesData({ targetFile }) {
 function moveSpaceToDisplay(spaceIndex, displayID) {
 	const cmd = `yabai -m space ${spaceIndex} --display ${displayID}`
 
-	cp.execSync(cmd)
+	console.log({cmd})
+	// cp.execSync(cmd)
 }
 
 function moveWindowToSpace(windowID, spaceIndex) {
 	const cmd = `yabai -m window ${windowID} --space ${spaceIndex}`
-	console.log({cmd})
 
-	cp.execSync(cmd)
+	console.log({cmd})
+	// cp.execSync(cmd)
 }
 
 function reconcile_cli(argv = process.argv.slice(2)) {
