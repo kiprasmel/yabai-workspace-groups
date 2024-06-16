@@ -1,182 +1,288 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>yabai-workspace-groups</title>
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>yabai-workspace-groups</title>
 
-	<style>
-		#display-list {
-			min-height: 100px;
-			/* border: 1px solid #000000;
+		<style>
+			#display-list {
+				min-height: 100px;
+				/* border: 1px solid #000000;
 			border-radius: 6px; */
 
-			display: flex;
-		}
-		#display-list > * + * {
-			margin-left: 1rem;
-		}
-		.display-item {
-			display: inline-block;
-			border: 2px solid #000000;
-			border-radius: 3px;
+				display: flex;
+			}
+			#display-list > * + * {
+				margin-left: 1rem;
+			}
+			.display-item {
+				display: inline-block;
+				border: 2px solid #000000;
+				border-radius: 3px;
 
-			margin: 0.5rem;
-			padding: 0.5rem;
-		}
-
-		.space-list {
-			display: flex;
-		}
-		.space-item {
-
-			border: 2px solid #000000;
-			border-radius: 3px;
-
-			margin: 0.5rem;
-			padding: 0.5rem;
-		}
-
-		.window-list {
-			display: flex;
-		}
-		.window-item {
-
-			border: 2px solid #000000;
-			border-radius: 3px;
-
-			margin: 0.5rem;
-			padding: 0.5rem;
-
-			/** for indicator M if minimized */
-			position: relative;
-		}
-		.window-item--indicator-minimized {
-			position: absolute;
-			top: 0;
-			/* bottom: 0; */
-			right: 0;
-
-			background: rgba(0, 0, 0, 0.5);
-			color: white;
-			padding: 4px;
-			border-radius: 0px 0px 0px 4px;
-			/* border-radius: 4px 0px 0px 0px; */
-		}
-	</style>
-</head>
-<body>
-	<h1>yabai workspace groups</h1>
-
-	<main id="app"></main>
-
-	<!-- 
-		- https://preactjs.com/guide/v10/getting-started#no-build-tools-route
-		- https://preactjs.com/guide/v10/getting-started#alternatives-to-jsx
-		- https://stackoverflow.com/a/69905913/9285308
-	-->
-	<script type="module">
-		import * as preact from 'https://unpkg.com/preact@latest?module';
-		import { useState, useEffect } from 'https://unpkg.com/preact@latest/hooks/dist/hooks.module.js?module';
-		import htm from 'https://unpkg.com/htm?module';
-
-		const h = htm.bind(preact.h);
-
-		window.preact = preact;
-		window.h = h;
-		
-		function App() {
-			const data = useFetchInitData()
-		
-			if (!data) return null
-
-			const displayConfig = "current"
-
-			return h`<${Workspace} data=${data} config=${displayConfig} />`
-		}
-
-		const defaultInitData = {
-			displays: [],
-			spaces: [],
-			windows: []
-		}
-		function useFetchInitData() {
-			const [data, setData] = useState(null)
-
-			useEffect(() => {
-				fetch("http://localhost:19420/api/v1/read?hierarchy")
-					.then(res => res.json())
-					.then(data => setData(data))
-			}, [])
-
-			return data
-		}
-
-		/** our made up name */
-		function Workspace({ data, config }) {
-			const info = `${config} workspace: ${data.stats.displays} displays, ${data.stats.spaces} spaces, ${data.stats.windows} windows.`;
-
-			return h`
-				<h2>${info}</h2>
-
-				<ul id="display-list">
-					${data.displays.map(display => h`
-						<${Display} key=${display.uuid} display=${display} />
-					`)}
-				</ul>
-			`;
-		}
-
-		function Display({ display }) {
-			return h`
-				<div class="display-item">
-					<span>display ${display.uuid}</span>
-
-					<ul class="space-list">
-						${display.spaces.map(space => h`
-							<${Space} key=${space.uuid} space=${space} />
-						`)}
-					</ul>
-				</div>
-			`
-		}
-
-		function Space({ space }) {
-			return h`
-				<div class="space-item">
-					<span>${space.index}</span>
-
-					<ul class="window-list">
-						${space.windows.map(window => h`
-							<${Window} key=${window.id} window=${window} />
-						`)}
-					</ul>
-				</div>
-			`
-		}
-
-		function Window({ window }) {
-			return h`
-				<div class="window-item">
-					<span>${window.title}</span>
-
-					<${WindowIsMinimizedIndicator} isMinimized=${window["is-minimized"]} />
-				</div>
-			`
-		}
-
-		function WindowIsMinimizedIndicator({ isMinimized }) {
-			if (!isMinimized) {
-				return null
+				margin: 0.5rem;
+				padding: 0.5rem;
 			}
 
-			return h`
-				<span class="window-item--indicator-minimized" title="minimized">M</span>
-			`
-		}
+			.space-list {
+				display: flex;
+			}
+			.space-item {
+				border: 2px solid #000000;
+				border-radius: 3px;
 
-		preact.render(h`<${App} />`, document.querySelector("#app"));
-	</script>
-</body>
+				margin: 0.5rem;
+				padding: 0.5rem;
+			}
+
+			.window-list {
+				display: flex;
+			}
+			.window-item {
+				border: 2px solid #000000;
+				border-radius: 3px;
+
+				margin: 0.5rem;
+				padding: 0.5rem;
+
+				/** for indicator M if minimized */
+				position: relative;
+			}
+			.window-item--indicator-minimized {
+				position: absolute;
+				top: 0;
+				/* bottom: 0; */
+				right: 0;
+
+				background: rgba(0, 0, 0, 0.5);
+				color: white;
+				padding: 4px;
+				border-radius: 0px 0px 0px 4px;
+				/* border-radius: 4px 0px 0px 0px; */
+			}
+
+			.workspace-list {
+				display: flex;
+			}
+			.workspace-list > * + * {
+				margin-left: 0.5rem;
+			}
+
+			#toggle--show-minimized-spaces {
+				display: flex;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>yabai workspace groups</h1>
+
+		<main id="app"></main>
+
+		<!--
+			https://github.com/sonyarianto/react-without-buildsteps/blob/959fd567064caa9797781001825166138069ac3b/index.html
+		-->
+		<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/@remix-run/router@1.13.1/dist/router.umd.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/react-router@6.20.1/dist/umd/react-router.production.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/react-router-dom@6.20.1/dist/umd/react-router-dom.production.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
+
+		<script type="text/babel" data-presets="env,react">
+			const {
+				useState,
+				useEffect,
+				useContext,
+				useMemo,
+				createContext,
+			} = React;
+
+			const ContextWorkspaceForPotentialSwappingDefaultValue = { workspace: "", value: null };
+			const ContextWorkspaceForPotentialSwapping = createContext(
+				ContextWorkspaceForPotentialSwappingDefaultValue
+			);
+			const useContextWorkspaceForPotentialSwapping = () => useContext(ContextWorkspaceForPotentialSwapping);
+			const ProviderWorkspaceForPotentialSwapping = ({ children }) => {
+				const [data, setData] = useState(ContextWorkspaceForPotentialSwappingDefaultValue);
+
+				function update(workspace, value) {
+					console.log("updating", { workspace, value });
+					setData({ workspace, value, update });
+				}
+
+				const dataMemo = useMemo(() => ({ ...data, update }), [data]);
+
+				return <ContextWorkspaceForPotentialSwapping.Provider value={dataMemo}>
+					{children}
+				</ContextWorkspaceForPotentialSwapping.Provider>
+			};
+
+			function Contexts({ children }) {
+				return <ProviderWorkspaceForPotentialSwapping>
+					{children}
+				</ProviderWorkspaceForPotentialSwapping>
+			}
+
+			function AppWrapper({ children }) {
+				return <Contexts>
+					<App>
+						{children}
+					</App>
+				</Contexts>
+			}
+
+			function App() {
+				const data = useFetchInitData();
+				const potentialSwappingWorkspaceData = useContextWorkspaceForPotentialSwapping();
+				// const [showMinimizedSpaces, setShowMinimizedSpaces] = useState(true);
+
+				if (!data) return null;
+
+				const displayConfig = "current";
+
+				return <>
+				<h2></h2>
+				<div id="toggle--show-minimized-spaces">
+					<input type="checkbox" onClick={() => {}} />
+					<p>show minimized</p>
+				</div>
+
+				<Workspace data={data} config={displayConfig} />
+
+				<AvailableWorkspaces />
+
+				<Workspace data={potentialSwappingWorkspaceData.value} config={potentialSwappingWorkspaceData.workspace} />
+				</>
+			}
+
+			const defaultInitData = {
+				displays: [],
+				spaces: [],
+				windows: [],
+			};
+			function useFetchInitData() {
+				const [data, setData] = useState(null);
+
+				useEffect(() => {
+					fetch("http://localhost:19420/api/v1/read?hierarchy")
+						.then((res) => res.json())
+						.then((x) => {
+							console.log({ data: x });
+							return x;
+						})
+						.then((x) => setData(x));
+				}, []);
+
+				return data;
+			}
+
+			function AvailableWorkspaces() {
+				const workspaces = useFetchAvailableWorkspaces();
+				const potentialSwappingWorkspaceData = useContextWorkspaceForPotentialSwapping();
+
+				async function selectWorkspaceForPotentialSwapping(workspace) {
+					const data = await fetch(`http://localhost:19420/api/v1/read?hierarchy&workspace=${workspace}`).then((res) =>
+						res.json()
+					);
+
+					potentialSwappingWorkspaceData.update(workspace, data);
+				}
+
+				if (!workspaces) {
+					return null;
+				}
+
+				const info = `${workspaces.length} workspaces available:`;
+
+				return <>
+				<h2>{info}</h2>
+
+				<ul class="workspace-list">
+					{workspaces.map(
+						(workspace) => <div>
+							<button onClick={() => selectWorkspaceForPotentialSwapping(workspace)}>
+								{workspace}
+							</button>
+						</div>
+					)}
+				</ul>
+				</>
+			}
+			function useFetchAvailableWorkspaces() {
+				const [data, setData] = useState(null);
+
+				useEffect(() => {
+					fetch("http://localhost:19420/api/v1/list-workspaces")
+						.then((res) => res.json())
+						.then((data) => setData(data.workspaces));
+				}, []);
+
+				return data;
+			}
+
+			/** our made up name */
+			function Workspace({ data, config }) {
+				if (!data) {
+					return null;
+				}
+
+				const info = `workspace "${config}": ${data.stats.displays} displays, ${data.stats.spaces} spaces, ${
+					data.stats.windows
+				} windows.`;
+
+				return <>
+				<h2>{info}</h2>
+
+				<ul id="display-list">
+					{data.displays.map((display) => <Display key={display.uuid} display={display} />)}
+				</ul>
+				</>
+			}
+
+			function Display({ display }) {
+				return <div class="display-item">
+					<span>display {display.uuid}</span>
+
+					<ul class="space-list">
+						{display.spaces.map((space) => <Space key={space.uuid} space={space} />)}
+					</ul>
+				</div>
+			}
+
+			function Space({ space }) {
+				console.log({ space });
+				return <div class="space-item">
+					<span>{space.index}</span>
+
+					<ul class="window-list">
+						{space.windows.map((window) => <Window key={window.id} window={window} />)}
+					</ul>
+				</div>
+			}
+
+			function Window({ window }) {
+				if (!window.title) {
+					return null;
+				}
+
+				return <div class="window-item">
+					<span>{window.title}</span>
+
+					<WindowIsMinimizedIndicator isMinimized={window["is-minimized"]} />
+				</div>
+			}
+
+			function WindowIsMinimizedIndicator({ isMinimized }) {
+				if (!isMinimized) {
+					return null;
+				}
+
+				return <span class="window-item--indicator-minimized" title="minimized">M</span>
+			}
+
+			ReactDOM.render(<AppWrapper />, document.getElementById("app"));
+		</script>
+	</body>
 </html>

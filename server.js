@@ -18,14 +18,21 @@ const execS = (cmd, extra) => execSync(cmd, { encoding: "utf-8", ...extra })
 
 app.get("/api/v1/read", async (req, res) => {
 	const shouldConvertToHierarchy = "hierarchy" in req.query
+	const workspaceName = req.query.workspace || "current"
 
 	try {
-		const current = readCurrentStringified()
+		const workspace = readWorkspace(workspaceName)
+
+		if (!workspace) {
+			const msg = `workspace "${workspaceName}" not found.`
+			console.warn(msg)
+			return res.status(400).json({ msg })
+		}
 
 		if (!shouldConvertToHierarchy) {
-			return res.status(200).send(current)
+			return res.status(200).send(workspace)
 		} else {
-			const currentParsed = JSON.parse(current)
+			const currentParsed = JSON.parse(workspace)
 			const currentInHierarchy = convertToHierarchy(currentParsed)
 			return res.status(200).json(currentInHierarchy)
 		}
@@ -34,6 +41,21 @@ app.get("/api/v1/read", async (req, res) => {
 		return res.status(500).json({ err })
 	}
 })
+
+function readWorkspace(workspace) {
+	if (workspace === "current") {
+		return readCurrentStringified()
+	}
+
+	const workspaces = listWorkspaces()
+
+	if (!workspaces.includes(workspace)) {
+		return null
+	}
+
+	const workspacePath = path.join(WORKSPACES_DIR, workspace)
+	return fs.readFileSync(workspacePath)
+}
 
 function readCurrentStringified() {
 	const displays = execS("yabai -m query --displays")
@@ -48,6 +70,9 @@ function readCurrentStringified() {
 
 /**
  * @mutates data
+ *
+ * TODO FIXME: found `null` for `window` inside `space` for the following request:
+ * http://localhost:19420/api/v1/read?hierarchy&workspace=6.sp.json
  */
 function convertToHierarchy(data) {
 	const stats = {
@@ -75,6 +100,24 @@ function convertToHierarchy(data) {
 		displays: data.displays,
 		stats,
 	}
+}
+
+const WORKSPACES_DIR = path.join(__dirname, "workspaces")
+
+app.get("/api/v1/list-workspaces", (_req, res) => {
+	try {
+		const workspaces = listWorkspaces()
+		return res.status(200).json({ workspaces })
+	} catch (err) {
+		console.error(err)
+		return res.status(500).json({ err })
+	}
+})
+
+function listWorkspaces() {
+	fs.mkdirSync(WORKSPACES_DIR, { recursive: true })
+	const workspaces = fs.readdirSync(WORKSPACES_DIR).filter(entry => entry.includes(".sp.json"))
+	return workspaces
 }
 
 function store(data, filepath) {
