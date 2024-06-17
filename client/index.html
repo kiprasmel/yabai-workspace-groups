@@ -310,7 +310,7 @@
 				return <>
 				<h2>{info}</h2>
 
-				<ul class="workspace-list">
+				<ul className="workspace-list">
 					{workspaces.map(
 						(workspace) => <div key={workspace}>
 							<button onClick={() => selectWorkspaceForPotentialSwapping(workspace)}>
@@ -358,10 +358,10 @@
 			}
 
 			function Display({ display }) {
-				return <div class="display-item">
+				return <div className="display-item">
 					<span>display {display.uuid}</span>
 
-					<ul class="space-list">
+					<ul className="space-list">
 						{display.spaces.map((space) => <Space key={space.uuid} space={space} />)}
 					</ul>
 				</div>
@@ -371,10 +371,10 @@
 				const ctxSettings = useCtxSettings();
 				const globalStore = useCtxGlobalStore();
 
-				return <div class="space-item">
+				return <div className="space-item">
 					<span>{space.index}</span>
 
-					<ul class="window-list">
+					<ul className="window-list">
 						{space.windows.map((window) => <Window key={window.id} window={window} showMinimized={ctxSettings.showMinimized} toggleSelectWindow={globalStore.toggleSelectWindow} />)}
 					</ul>
 				</div>
@@ -391,7 +391,7 @@
 					return null
 				}
 
-				return <div class="window-item" onClick={() => {
+				return <div className="window-item" onClick={() => {
 						toggleSelectWindow(window)
 					}}>
 					<span>{window.title}</span>
@@ -402,10 +402,10 @@
 			}
 
 			function WindowIsMinimizedIndicator({ isMinimized }) {
-				return !isMinimized ? null : <span class="window-item--indicator-minimized" title="minimized">M</span>
+				return !isMinimized ? null : <span className="window-item--indicator-minimized" title="minimized">M</span>
 			}
 			function WindowAppIcon({ pid, app }) {
-				return <span class="window-item--indicator-app" title={app}>{pid}</span>
+				return <span className="window-item--indicator-app" title={app}>{pid}</span>
 			}
 
 			const root = ReactDOM.createRoot(document.getElementById('app'));
