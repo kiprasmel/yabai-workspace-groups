@@ -63,6 +63,9 @@
 				cursor: pointer;
 				user-select: none;
 			}
+			.window-item--selected {
+				background: hsla(200, 100%, 60%, 0.5);
+			}
 			.window-item--indicator-minimized {
 				position: absolute;
 				top: 0;
@@ -207,17 +210,21 @@
 				function unselectWindow(w) {
 					setData(x => ({ ...x, selectedWindows: x.selectedWindows.filter(x => x.id !== w.id) }))
 				}
+				function isWindowSelected(w) {
+					return data.selectedWindows.some(x => x.id === w.id)
+				}
 				function toggleSelectWindow(w) {
-					const has = data.selectedWindows.some(x => x.id === w.id)
-					if (has) unselectWindow(w)
+					const isSelected = isWindowSelected(w)
+					if (isSelected) unselectWindow(w)
 					else selectWindow(w)
 				}
 
 				const dataMemo = useMemo(() => ({
 						...data,
 						toggleSelectWindow,
+						isWindowSelected,
 					}),
-					[data, toggleSelectWindow]
+					[data, toggleSelectWindow, isWindowSelected]
 				);
 				return <CtxGlobalStore.Provider value={dataMemo}>
 					{children}
@@ -375,12 +382,12 @@
 					<span>{space.index}</span>
 
 					<ul className="window-list">
-						{space.windows.map((window) => <Window key={window.id} window={window} showMinimized={ctxSettings.showMinimized} toggleSelectWindow={globalStore.toggleSelectWindow} />)}
+						{space.windows.map((w) => <Window key={w.id} window={w} showMinimized={ctxSettings.showMinimized} toggleSelectWindow={globalStore.toggleSelectWindow} isSelected={globalStore.isWindowSelected(w)} />)}
 					</ul>
 				</div>
 			}
 
-			function Window({ window, showMinimized = true, toggleSelectWindow = () => {} }) {
+			function Window({ window, showMinimized = true, toggleSelectWindow = () => {}, isSelected }) {
 				if (!window.title) {
 					return null;
 				}
@@ -391,7 +398,12 @@
 					return null
 				}
 
-				return <div className="window-item" onClick={() => {
+				const className = [
+					"window-item",
+					isSelected ? "window-item--selected" : ""
+				].join(" ")
+
+				return <div className={className} onClick={() => {
 						toggleSelectWindow(window)
 					}}>
 					<span>{window.title}</span>
