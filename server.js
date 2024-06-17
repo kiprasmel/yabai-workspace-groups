@@ -121,7 +121,11 @@ app.get("/api/v1/list-workspaces", (_req, res) => {
 function listWorkspaces() {
 	fs.mkdirSync(WORKSPACES_DIR, { recursive: true })
 	const workspaces = fs.readdirSync(WORKSPACES_DIR).filter(entry => entry.includes(".sp.json"))
-	return workspaces
+	return sortWorkspaces(workspaces)
+}
+
+function sortWorkspaces(xs) {
+	return xs.sort((A, B) => Number(A.split(".")[0]) - Number(B.split(".")[0]));
 }
 
 function store(data, filepath) {
