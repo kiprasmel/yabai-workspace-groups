@@ -59,6 +59,9 @@
 
 				/** for indicator M if minimized */
 				position: relative;
+
+				cursor: pointer;
+				user-select: none;
 			}
 			.window-item--indicator-minimized {
 				position: absolute;
@@ -102,12 +105,24 @@
 		<!--
 			https://github.com/sonyarianto/react-without-buildsteps/blob/959fd567064caa9797781001825166138069ac3b/index.html
 		-->
-		<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/@remix-run/router@1.13.1/dist/router.umd.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/react-router@6.20.1/dist/umd/react-router.production.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/react-router-dom@6.20.1/dist/umd/react-router-dom.production.min.js"></script>
+
+		<!-- BEGIN DEV -->
+		<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.development.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.development.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/@remix-run/router@1.13.1/dist/router.umd.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/react-router@6.20.1/dist/umd/react-router.development.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/react-router-dom@6.20.1/dist/umd/react-router-dom.development.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
+		<!-- END DEV -->
+
+		<!-- BEGIN PROD -->
+		<!-- <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script> -->
+		<!-- <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script> -->
+		<!-- <script src="https://cdn.jsdelivr.net/npm/@remix-run/router@1.13.1/dist/router.umd.min.js"></script> -->
+		<!-- <script src="https://cdn.jsdelivr.net/npm/react-router@6.20.1/dist/umd/react-router.production.min.js"></script> -->
+		<!-- <script src="https://cdn.jsdelivr.net/npm/react-router-dom@6.20.1/dist/umd/react-router-dom.production.min.js"></script> -->
+		<!-- <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script> -->
+		<!-- END PROD -->
 
 		<script type="text/babel" data-presets="env,react">
 			const {
@@ -167,12 +182,56 @@
 				</CtxSettings.Provider>
 			};
 
+			const CtxGlobalStoreDefaultValue = { selectedWindows: [], toggleSelectWindow: () => {} };
+			const CtxGlobalStore = createContext(CtxGlobalStoreDefaultValue);
+			const useCtxGlobalStore = () => useContext(CtxGlobalStore);
+			const CtxGlobalStoreLSKey = "ywsg.globalStore"
+			const CtxGlobalStoreProvider = ({ children }) => {
+				const [data, _setData] = useState(JSON.parse(localStorage.getItem(CtxGlobalStoreLSKey) || null) || CtxGlobalStoreDefaultValue);
+				const setData = (x) => {
+					if (x instanceof Function) {
+						return _setData(oldX => {
+							const newX = x(oldX)
+							localStorage.setItem(CtxGlobalStoreLSKey, JSON.stringify(newX))
+							return newX
+						})
+					} else {
+						localStorage.setItem(CtxGlobalStoreLSKey, JSON.stringify(x))
+						return _setData(x)
+					}
+				}
+
+				function selectWindow(w) {
+					setData(x => ({ ...x, selectedWindows: [...x.selectedWindows, w] }))
+				}
+				function unselectWindow(w) {
+					setData(x => ({ ...x, selectedWindows: x.selectedWindows.filter(x => x.id !== w.id) }))
+				}
+				function toggleSelectWindow(w) {
+					const has = data.selectedWindows.some(x => x.id === w.id)
+					if (has) unselectWindow(w)
+					else selectWindow(w)
+				}
+
+				const dataMemo = useMemo(() => ({
+						...data,
+						toggleSelectWindow,
+					}),
+					[data, toggleSelectWindow]
+				);
+				return <CtxGlobalStore.Provider value={dataMemo}>
+					{children}
+				</CtxGlobalStore.Provider>
+			};
+
 			function Contexts({ children }) {
 				return <>
 					<CtxSettingsProvider>
+					<CtxGlobalStoreProvider>
 					<ProviderWorkspaceForPotentialSwapping>
 					{children}
 					</ProviderWorkspaceForPotentialSwapping>
+					</CtxGlobalStoreProvider>
 					</CtxSettingsProvider>
 				</>
 			}
@@ -253,7 +312,7 @@
 
 				<ul class="workspace-list">
 					{workspaces.map(
-						(workspace) => <div>
+						(workspace) => <div key={workspace}>
 							<button onClick={() => selectWorkspaceForPotentialSwapping(workspace)}>
 								{workspace}
 							</button>
@@ -310,17 +369,18 @@
 
 			function Space({ space }) {
 				const ctxSettings = useCtxSettings();
+				const globalStore = useCtxGlobalStore();
 
 				return <div class="space-item">
 					<span>{space.index}</span>
 
 					<ul class="window-list">
-						{space.windows.map((window) => <Window key={window.id} window={window} showMinimized={ctxSettings.showMinimized} />)}
+						{space.windows.map((window) => <Window key={window.id} window={window} showMinimized={ctxSettings.showMinimized} toggleSelectWindow={globalStore.toggleSelectWindow} />)}
 					</ul>
 				</div>
 			}
 
-			function Window({ window, showMinimized = true }) {
+			function Window({ window, showMinimized = true, toggleSelectWindow = () => {} }) {
 				if (!window.title) {
 					return null;
 				}
@@ -331,7 +391,9 @@
 					return null
 				}
 
-				return <div class="window-item">
+				return <div class="window-item" onClick={() => {
+						toggleSelectWindow(window)
+					}}>
 					<span>{window.title}</span>
 
 					<WindowIsMinimizedIndicator isMinimized={isMinimized} />
@@ -346,7 +408,10 @@
 				return <span class="window-item--indicator-app" title={app}>{pid}</span>
 			}
 
-			ReactDOM.render(<AppWrapper />, document.getElementById("app"));
+			const root = ReactDOM.createRoot(document.getElementById('app'));
+			console.log({root})
+			root.render(<AppWrapper />);
+			//ReactDOM.render(document.getElementById('app'), <AppWrapper />);
 		</script>
 	</body>
 </html>
