@@ -7,34 +7,44 @@
 		<title>yabai-workspace-groups</title>
 
 		<style>
+			ul {
+				margin: 0;
+				padding: 0;
+			}
+
 			#display-list {
 				min-height: 100px;
 				/* border: 1px solid #000000;
 			border-radius: 6px; */
 
 				display: flex;
+				flex-direction: column;
 			}
 			#display-list > * + * {
-				margin-left: 1rem;
+				margin-top: 4rem;
 			}
 			.display-item {
-				display: inline-block;
+				display: flex;
+				flex-direction: column;
 				border: 2px solid #000000;
 				border-radius: 3px;
 
 				margin: 0.5rem;
 				padding: 0.5rem;
+
+				min-height: 18rem;
 			}
 
 			.space-list {
 				display: flex;
+				margin: 1rem;
 			}
 			.space-item {
 				border: 2px solid #000000;
 				border-radius: 3px;
 
 				margin: 0.5rem;
-				padding: 0.5rem;
+				padding: 1rem;
 			}
 
 			.window-list {
