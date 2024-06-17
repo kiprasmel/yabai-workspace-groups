@@ -119,10 +119,43 @@
 				</ContextWorkspaceForPotentialSwapping.Provider>
 			};
 
-			function Contexts({ children }) {
-				return <ProviderWorkspaceForPotentialSwapping>
+			const CtxSettingsDefaultValue = { showMinimized: false };
+			const CtxSettings = createContext(CtxSettingsDefaultValue);
+			const useCtxSettings = () => useContext(CtxSettings);
+			const CtxSettingsLSKey = "ywsg.settings"
+			const CtxSettingsProvider = ({ children }) => {
+				const [data, _setData] = useState(JSON.parse(localStorage.getItem(CtxSettingsLSKey) || null) || CtxSettingsDefaultValue);
+				const setData = (x) => {
+					if (x instanceof Function) {
+						return _setData(oldX => {
+							const newX = x(oldX)
+							localStorage.setItem(CtxSettingsLSKey, JSON.stringify(newX))
+							return newX
+						})
+					} else {
+						localStorage.setItem(CtxSettingsLSKey, JSON.stringify(x))
+						return _setData(x)
+					}
+				}
+				const toggleProp = (prop) => () => {
+					console.log("toggling prop", prop, data[prop])
+					return setData(x => ({ ...x, [prop]: !x[prop] }));
+				}
+				const toggleShowMinimized = toggleProp("showMinimized");
+				const dataMemo = useMemo(() => ({ ...data, toggleProp, toggleShowMinimized }), [data]);
+				return <CtxSettings.Provider value={dataMemo}>
 					{children}
-				</ProviderWorkspaceForPotentialSwapping>
+				</CtxSettings.Provider>
+			};
+
+			function Contexts({ children }) {
+				return <>
+					<CtxSettingsProvider>
+					<ProviderWorkspaceForPotentialSwapping>
+					{children}
+					</ProviderWorkspaceForPotentialSwapping>
+					</CtxSettingsProvider>
+				</>
 			}
 
 			function AppWrapper({ children }) {
@@ -136,7 +169,7 @@
 			function App() {
 				const data = useFetchInitData();
 				const potentialSwappingWorkspaceData = useContextWorkspaceForPotentialSwapping();
-				// const [showMinimizedSpaces, setShowMinimizedSpaces] = useState(true);
+				const ctxSettings = useCtxSettings();
 
 				if (!data) return null;
 
@@ -145,8 +178,8 @@
 				return <>
 				<h2></h2>
 				<div id="toggle--show-minimized-spaces">
-					<input type="checkbox" onClick={() => {}} />
-					<p>show minimized</p>
+					<input type="checkbox" checked={ctxSettings.showMinimized} onChange={ctxSettings.toggleShowMinimized} />
+					<p>show minimized {ctxSettings.showMinimized}</p>
 				</div>
 
 				<Workspace data={data} config={displayConfig} />
@@ -228,10 +261,15 @@
 					return null;
 				}
 
-				const info = `workspace "${config}": ${data.stats.displays} displays, ${data.stats.spaces} spaces, ${
-					data.stats.windows
-				} windows.`;
+				const { stats } = data;
 
+				const infos = [
+					`${stats.displays} displays`,
+					`${stats.spaces} spaces`,
+					`${stats.windows} (${stats.windowsNonMinimized} + ${stats.windowsMinimized}M) windows.`
+				];
+				const info = `workspace "${config}": ` + infos.join(", ")
+			
 				return <>
 				<h2>{info}</h2>
 
@@ -252,25 +290,32 @@
 			}
 
 			function Space({ space }) {
-				console.log({ space });
+				const ctxSettings = useCtxSettings();
+
 				return <div class="space-item">
 					<span>{space.index}</span>
 
 					<ul class="window-list">
-						{space.windows.map((window) => <Window key={window.id} window={window} />)}
+						{space.windows.map((window) => <Window key={window.id} window={window} showMinimized={ctxSettings.showMinimized} />)}
 					</ul>
 				</div>
 			}
 
-			function Window({ window }) {
+			function Window({ window, showMinimized = true }) {
 				if (!window.title) {
 					return null;
+				}
+
+				const isMinimized = window["is-minimized"];
+
+				if (isMinimized && !showMinimized) {
+					return null
 				}
 
 				return <div class="window-item">
 					<span>{window.title}</span>
 
-					<WindowIsMinimizedIndicator isMinimized={window["is-minimized"]} />
+					<WindowIsMinimizedIndicator isMinimized={isMinimized} />
 				</div>
 			}
 

@@ -79,7 +79,11 @@ function convertToHierarchy(data) {
 		displays: data.displays.length,
 		spaces: data.spaces.length,
 		windows: data.windows.length,
+		windowsMinimized: -1,
+		windowsNonMinimized: data.windows.filter(x => !x["is-minimized"]).length,
 	}
+
+	stats.windowsMinimized = stats.windows - stats.windowsNonMinimized
 
 	/** convert windowIDs to full window objects */
 	data.spaces = data.spaces.map(space => Object.assign(space, {
