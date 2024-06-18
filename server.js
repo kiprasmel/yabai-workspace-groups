@@ -16,6 +16,53 @@ app.use(express.json())
 
 const execS = (cmd, extra) => execSync(cmd, { encoding: "utf-8", ...extra })
 
+/**
+ * query params:
+ * - id: unique name of the workspace
+ * - forceOverwrite: if should write new data to an already existing workspace id
+*/
+app.post("/api/v1/store", async (req, res) => {
+	try {
+		let wsId = req.query.id
+
+		if (!wsId) {
+			const msg = "workspace 'id' missing from request query params"
+			return res.status(400).json({ msg })
+		}
+
+		if (!wsId.includes(WORKSPACE_SUFFIX)) {
+			wsId = wsId + WORKSPACE_SUFFIX
+		}
+
+		const wss = listWorkspaces()
+		const forceOverwrite = "forceOverwrite" in req.query && req.query.forceOverwrite !== "0"
+
+		if (wss.includes(wsId) && !forceOverwrite) {
+			const msg = "provided workspace 'id' already exists, but 'forceOverwrite' query param was not provided."
+			return res.status(400).json({ msg })
+		}
+
+		const data = req.body
+		console.log({data})
+		if (!data || Object.keys(data).length === 0) {
+			const msg = "no workspace data provided."
+			return res.status(400).json({ msg })
+		}
+
+		storeWorkspace(data, wsId)
+
+		return res.status(200).json({ msg: "stored successfully" })
+	} catch (err) {
+		console.error(err)
+		return res.status(500).json({ err })
+	}
+})
+
+function storeWorkspace(data, workspaceId) {
+	const filepath = path.join(ensureWorkspacesDir(), workspaceId)
+	fs.writeFileSync(filepath, JSON.stringify(data))
+}
+
 app.get("/api/v1/read", async (req, res) => {
 	const shouldConvertToHierarchy = "hierarchy" in req.query
 	const workspaceName = req.query.workspace || "current"
@@ -107,6 +154,7 @@ function convertToHierarchy(data) {
 }
 
 const WORKSPACES_DIR = path.join(__dirname, "workspaces")
+const WORKSPACE_SUFFIX = ".sp.json"
 
 app.get("/api/v1/list-workspaces", (_req, res) => {
 	try {
@@ -118,25 +166,19 @@ app.get("/api/v1/list-workspaces", (_req, res) => {
 	}
 })
 
-function listWorkspaces() {
+function ensureWorkspacesDir() {
 	fs.mkdirSync(WORKSPACES_DIR, { recursive: true })
+	return WORKSPACES_DIR
+}
+
+function listWorkspaces() {
+	ensureWorkspacesDir()
 	const workspaces = fs.readdirSync(WORKSPACES_DIR).filter(entry => entry.includes(".sp.json"))
 	return sortWorkspaces(workspaces)
 }
 
 function sortWorkspaces(xs) {
 	return xs.sort((A, B) => Number(A.split(".")[0]) - Number(B.split(".")[0]));
-}
-
-function store(data, filepath) {
-	const dirpath = path.dirname(filepath)
-
-	fs.mkdirSync(dirpath, { recursive: true })
-	fs.writeFileSync(filepath, JSON.stringify(data))
-}
-
-function readFromStored() {
-
 }
 
 /** serve static client */
