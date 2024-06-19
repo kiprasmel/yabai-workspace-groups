@@ -233,8 +233,8 @@
 				function hasSelectedWindows() {
 					return data.selectedWindows.length > 0
 				}
-				function moveWindowsToSpace(newSpace, windowsToMove = data.selectedWindows) {
-					console.log("moveWindowsToSpace", {newSpace, windowsToMove})
+				function moveWindowsToSpace(newSpace, _windowsToMove = data.selectedWindows) {
+					console.log("moveWindowsToSpace", {newSpace, _windowsToMove})
 
 					// for each window:
 					// - remove from current space
@@ -250,19 +250,58 @@
 					// handle failure
 
 					const flatSpaces = data.workspace.displays.flatMap(x => x.spaces)
+					const flatWindows = flatSpaces.flatMap(x => x.windows)
 
-					for (const w of windowsToMove) {
+					/**
+					 * upon restoring the `data.selectedWindows` from localStorage,
+					 * the in-memory references will be different from the ones
+					 * in data.workspace.displays[].spaces[].windows[],
+					 * even though the data contents will be the same.
+					 *
+					 * this would cause stale data & e.g. duplicate `window` items
+					 * in >1 space upon moving.
+					 *
+					 * thus, update to the proper references.
+					*/
+					const windowsToMoveFixedRefs = flatWindows.filter(x => _windowsToMove.some(y => y.id === x.id))
+
+					/**
+						TODO:
+						maybe have arrays for `doUI`, `undoUI`, `syncUI2srv`,
+						and go by index,
+						and do doUI + syncUI2srv,
+					*/
+					const undo = []
+
+					// BEGIN SETDATA HACK
+					// TODO FIXME - we're updating in-place by mutating,
+					// instead of properly (should be creating a new object).
+					for (const w of windowsToMoveFixedRefs) {
 						const idxOfCurrSpaceOfWindow = w.space
 						const currSpace = flatSpaces.find(x => x.index === idxOfCurrSpaceOfWindow)
 
-						currSpace.windows = currSpace.windows.filter(x => x.id !== w.id)
+						w.display = newSpace.display
 						w.space = newSpace.index
 						newSpace.windows.push(w)
+						currSpace.windows = currSpace.windows.filter(x => x.id !== w.id)
+
+						undo.push(() => {
+							w.display = currSpace.display
+							w.space = currSpace.index
+							currSpace.windows.push(w)
+							newSpace.windows = newSpace.windows.filter(x => x.id !== w.id)
+						})
 					}
 
-					setData(x => ({ ...x, workspace: { ...x.workspace } }))
-				}
+					setData(x => ({ ...x, workspace: data.workspace }))
+					// END SETDATA HACK
 
+					// TEST UNDO
+					//setTimeout(() => {
+					//	undo.forEach(x => x())
+					//	setData(x => ({ ...x, workspace: data.workspace }))
+					//}, 2000)
+				}
 
 				const dataMemo = useMemo(() => ({
 						...data,
