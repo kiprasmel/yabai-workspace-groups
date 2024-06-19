@@ -174,20 +174,15 @@
 				spaces: [],
 				windows: [],
 			};
-			function useFetchWorkspaceData() {
-				const [data, setData] = useState(null);
-
+			function useFetchWorkspaceData(globalStore) {
 				useEffect(() => {
 					fetch("http://localhost:19420/api/v1/read?hierarchy")
 						.then((res) => res.json())
-						.then((x) => {
-							console.log({ data: x });
-							return x;
+						.then((data) => {
+							console.log({ data });
+							globalStore.setData(x => ({ ...x, workspace: { ...x.workspace, ...data } }))
 						})
-						.then((x) => setData(x));
 				}, []);
-
-				return data;
 			}
 
 			const CtxGlobalStoreDefaultValue = {
@@ -237,8 +232,8 @@
 				function hasSelectedWindows() {
 					return data.selectedWindows.length > 0
 				}
-				function moveWindowsToSpace(space, windowsToMove = data.selectedWindows) {
-					console.log("moveWindowsToSpace", {space, windowsToMove})
+				function moveWindowsToSpace(newSpace, windowsToMove = data.selectedWindows) {
+					console.log("moveWindowsToSpace", {newSpace, windowsToMove})
 
 					// for each window:
 					// - remove from current space
@@ -253,32 +248,30 @@
 					// handle success
 					// handle failure
 
+					const flatSpaces = data.workspace.displays.flatMap(x => x.spaces)
+
 					for (const w of windowsToMove) {
-						const idxOfCurrSpaceOfWindow = w.space // idx
-						//data.spaces
+						const idxOfCurrSpaceOfWindow = w.space
+						const currSpace = flatSpaces.find(x => x.index === idxOfCurrSpaceOfWindow)
 
-						// TODO: flatMap to get all spaces from displays hierarchy
-						// wait, flatMap won't work since we can't mutate the orig data then...
-						// need something like "walkThruObjectsUntilMatchAndModify" lol
-						// .. maybe we shouldn't store init data as hierarchy?
-						//    and instead have it flat as source of truth, from which we convert into hierarchy
-						//    when passing to subcomponents to render?
-
-						const currSpace = globalStore.workspace.spaces.find(x => x.index === idxOfCurrSpaceOfWindow)
 						currSpace.windows = currSpace.windows.filter(x => x.id !== w.id)
+						newSpace.windows.push(w)
 					}
+
+					setData(x => ({ ...x, workspace: { ...x.workspace } }))
 				}
 
 
 				const dataMemo = useMemo(() => ({
 						...data,
+						setData,
 						toggleShowMinimizedWindows,
 						toggleSelectWindow,
 						isWindowSelected,
 						hasSelectedWindows,
 						moveWindowsToSpace,
 					}),
-					[data, toggleShowMinimizedWindows, toggleSelectWindow, isWindowSelected, hasSelectedWindows, moveWindowsToSpace]
+					[data, setData, toggleShowMinimizedWindows, toggleSelectWindow, isWindowSelected, hasSelectedWindows, moveWindowsToSpace]
 				);
 				window.globalStore = dataMemo
 				return <CtxGlobalStore.Provider value={dataMemo}>
@@ -305,13 +298,11 @@
 			}
 
 			function App() {
-				const workspace = useFetchWorkspaceData();
 				const potentialSwappingWorkspaceData = useContextWorkspaceForPotentialSwapping();
 				const globalStore = useCtxGlobalStore();
+				useFetchWorkspaceData(globalStore);
 
-				if (!workspace) return null;
-
-				globalStore.workspace = workspace;
+				if (!globalStore.workspace) return null;
 
 				const displayConfig = "current";
 
@@ -447,7 +438,8 @@
 					isSelected ? "window-item--selected" : ""
 				].join(" ")
 
-				return <div className={className} onClick={() => {
+				return <div className={className} onClick={(e) => {
+						e.stopPropagation()
 						toggleSelectWindow(window)
 					}}>
 					<span>{window.title}</span>
