@@ -169,7 +169,29 @@
 				</ContextWorkspaceForPotentialSwapping.Provider>
 			};
 
+			const defaultWorkspaceData = {
+				displays: [],
+				spaces: [],
+				windows: [],
+			};
+			function useFetchWorkspaceData() {
+				const [data, setData] = useState(null);
+
+				useEffect(() => {
+					fetch("http://localhost:19420/api/v1/read?hierarchy")
+						.then((res) => res.json())
+						.then((x) => {
+							console.log({ data: x });
+							return x;
+						})
+						.then((x) => setData(x));
+				}, []);
+
+				return data;
+			}
+
 			const CtxGlobalStoreDefaultValue = {
+				workspace: defaultWorkspaceData,
 				showMinimizedWindows: true,
 				selectedWindows: [],
 				toggleSelectWindow: () => {},
@@ -231,12 +253,9 @@
 					// handle success
 					// handle failure
 
-
 					for (const w of windowsToMove) {
 						const idxOfCurrSpaceOfWindow = w.space // idx
 						//data.spaces
-
-						// TODO: globalStore data
 
 						// TODO: flatMap to get all spaces from displays hierarchy
 						// wait, flatMap won't work since we can't mutate the orig data then...
@@ -245,7 +264,7 @@
 						//    and instead have it flat as source of truth, from which we convert into hierarchy
 						//    when passing to subcomponents to render?
 
-						const currSpace = globalStore.initData.spaces.find(x => x.index === idxOfCurrSpaceOfWindow)
+						const currSpace = globalStore.workspace.spaces.find(x => x.index === idxOfCurrSpaceOfWindow)
 						currSpace.windows = currSpace.windows.filter(x => x.id !== w.id)
 					}
 				}
@@ -286,11 +305,13 @@
 			}
 
 			function App() {
-				const data = useFetchInitData(); // TODO: move into globalStore, so that can access e.g. all spaces, to e.g. move windows from current spaces to new one
+				const workspace = useFetchWorkspaceData();
 				const potentialSwappingWorkspaceData = useContextWorkspaceForPotentialSwapping();
 				const globalStore = useCtxGlobalStore();
 
-				if (!data) return null;
+				if (!workspace) return null;
+
+				globalStore.workspace = workspace;
 
 				const displayConfig = "current";
 
@@ -305,33 +326,12 @@
 					<p>show minimized {globalStore.showMinimizedWindows}</p>
 				</div>
 
-				<Workspace data={data} config={displayConfig} />
+				<Workspace data={globalStore.workspace} config={displayConfig} />
 
 				<AvailableWorkspaces />
 
 				<Workspace data={potentialSwappingWorkspaceData.value} config={potentialSwappingWorkspaceData.workspace} />
 				</div>
-			}
-
-			const defaultInitData = {
-				displays: [],
-				spaces: [],
-				windows: [],
-			};
-			function useFetchInitData() {
-				const [data, setData] = useState(null);
-
-				useEffect(() => {
-					fetch("http://localhost:19420/api/v1/read?hierarchy")
-						.then((res) => res.json())
-						.then((x) => {
-							console.log({ data: x });
-							return x;
-						})
-						.then((x) => setData(x));
-				}, []);
-
-				return data;
 			}
 
 			function AvailableWorkspaces() {
