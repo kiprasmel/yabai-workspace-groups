@@ -280,17 +280,22 @@
 						const idxOfCurrSpaceOfWindow = w.space
 						const currSpace = flatSpaces.find(x => x.index === idxOfCurrSpaceOfWindow)
 
-						w.display = newSpace.display
-						w.space = newSpace.index
-						newSpace.windows.push(w)
-						currSpace.windows = currSpace.windows.filter(x => x.id !== w.id)
+						if (w.display !== newSpace.display) {
+							w.display = newSpace.display
+							undo.push(() => w.display = currSpace.display)
+						}
 
-						undo.push(() => {
-							w.display = currSpace.display
-							w.space = currSpace.index
-							currSpace.windows.push(w)
-							newSpace.windows = newSpace.windows.filter(x => x.id !== w.id)
-						})
+						if (w.space !== newSpace.index) {
+							w.space = newSpace.index
+							newSpace.windows.push(w)
+							currSpace.windows = currSpace.windows.filter(x => x.id !== w.id)
+
+							undo.push(() => {
+								w.space = currSpace.index
+								currSpace.windows.push(w)
+								newSpace.windows = newSpace.windows.filter(x => x.id !== w.id)
+							})
+						}
 					}
 
 					setData(x => ({ ...x, workspace: data.workspace }))
