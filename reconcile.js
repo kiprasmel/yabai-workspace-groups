@@ -202,7 +202,7 @@ function moveWindowToSpace(windowID, spaceIndex) {
 	const cmd = `yabai -m window ${windowID} --space ${spaceIndex}`
 
 	console.log({cmd})
-	// cp.execSync(cmd)
+	cp.execSync(cmd)
 }
 
 function reconcile_cli(argv = process.argv.slice(2)) {
@@ -246,6 +246,10 @@ function TODO() {
 }
 
 class Termination extends Error {}
+
+module.exports = {
+	moveWindowToSpace,
+}
 
 if (!module.parent) {
 	reconcile_cli()

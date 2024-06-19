@@ -8,6 +8,8 @@ const util = require("util")
 const express = require("express")
 const cors = require("cors")
 
+const { moveWindowToSpace } = require("./reconcile")
+
 const app = express()
 
 app.use(cors())
@@ -180,6 +182,38 @@ function listWorkspaces() {
 function sortWorkspaces(xs) {
 	return xs.sort((A, B) => Number(A.split(".")[0]) - Number(B.split(".")[0]));
 }
+
+app.post("/api/v1/move-windows", async (req, res) => {
+	try {
+		const data = req.body
+
+		if (!data || !data.length || !data.every(x => x.length === 2)) {
+			const msg = "request body format should be [windowId, spaceIndex][]."
+			return res.status(400).json({ msg })
+		}
+
+		const failures = []
+		for (const [windowId, spaceIdx] of data) {
+			// TODO: individual try-catch w/ retry logic?
+			try {
+				moveWindowToSpace(windowId, spaceIdx)
+			} catch (e) {
+				failures.push(e)
+			}
+		}
+
+		if (failures.length > 0) {
+			const msg = "encountered failures while moving some windows."
+			return res.status(500).json({ msg, failures })
+		}
+
+		const msg = "successfully moved windows with 0 failures."
+		return res.status(200).json({ msg })
+	} catch (err) {
+		console.error(err)
+		return res.status(500).json({ err })
+	}
+})
 
 /** serve static client */
 app.use(express.static(path.join(__dirname, "client")))

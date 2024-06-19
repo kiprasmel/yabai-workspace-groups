@@ -233,7 +233,7 @@
 				function hasSelectedWindows() {
 					return data.selectedWindows.length > 0
 				}
-				function moveWindowsToSpace(newSpace, _windowsToMove = data.selectedWindows) {
+				async function moveWindowsToSpace(newSpace, _windowsToMove = data.selectedWindows) {
 					console.log("moveWindowsToSpace", {newSpace, _windowsToMove})
 
 					// for each window:
@@ -271,6 +271,7 @@
 						and go by index,
 						and do doUI + syncUI2srv,
 					*/
+					const sync = []
 					const undo = []
 
 					// BEGIN SETDATA HACK
@@ -290,6 +291,8 @@
 							newSpace.windows.push(w)
 							currSpace.windows = currSpace.windows.filter(x => x.id !== w.id)
 
+							sync.push([w.id, newSpace.index])
+
 							undo.push(() => {
 								w.space = currSpace.index
 								currSpace.windows.push(w)
@@ -299,6 +302,19 @@
 					}
 
 					setData(x => ({ ...x, workspace: data.workspace }))
+
+					const res = await fetch(`http://localhost:19420/api/v1/move-windows`, {
+						method: "POST",
+						body: JSON.stringify(sync),
+						headers: {
+							"Content-Type": "application/json"
+						}
+					})
+
+					const resData = await res.json()
+
+					console.log({res, resData})
+
 					// END SETDATA HACK
 
 					// TEST UNDO
