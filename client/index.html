@@ -169,36 +169,8 @@
 				</ContextWorkspaceForPotentialSwapping.Provider>
 			};
 
-			const CtxSettingsDefaultValue = { showMinimized: false };
-			const CtxSettings = createContext(CtxSettingsDefaultValue);
-			const useCtxSettings = () => useContext(CtxSettings);
-			const CtxSettingsLSKey = "ywsg.settings"
-			const CtxSettingsProvider = ({ children }) => {
-				const [data, _setData] = useState(JSON.parse(localStorage.getItem(CtxSettingsLSKey) || null) || CtxSettingsDefaultValue);
-				const setData = (x) => {
-					if (x instanceof Function) {
-						return _setData(oldX => {
-							const newX = x(oldX)
-							localStorage.setItem(CtxSettingsLSKey, JSON.stringify(newX))
-							return newX
-						})
-					} else {
-						localStorage.setItem(CtxSettingsLSKey, JSON.stringify(x))
-						return _setData(x)
-					}
-				}
-				const toggleProp = (prop) => () => {
-					console.log("toggling prop", prop, data[prop])
-					return setData(x => ({ ...x, [prop]: !x[prop] }));
-				}
-				const toggleShowMinimized = toggleProp("showMinimized");
-				const dataMemo = useMemo(() => ({ ...data, toggleProp, toggleShowMinimized }), [data]);
-				return <CtxSettings.Provider value={dataMemo}>
-					{children}
-				</CtxSettings.Provider>
-			};
-
 			const CtxGlobalStoreDefaultValue = {
+				showMinimizedWindows: true,
 				selectedWindows: [],
 				toggleSelectWindow: () => {},
 				isWindowSelected: () => false,
@@ -210,7 +182,6 @@
 			const CtxGlobalStoreLSKey = "ywsg.globalStore"
 			const CtxGlobalStoreProvider = ({ children }) => {
 				const [data, _setData] = useState(JSON.parse(localStorage.getItem(CtxGlobalStoreLSKey) || null) || CtxGlobalStoreDefaultValue);
-				window.globalStore = data
 				const setData = (x) => {
 					if (x instanceof Function) {
 						return _setData(oldX => {
@@ -223,6 +194,9 @@
 						return _setData(x)
 					}
 				}
+
+				const toggleProp = (prop) => () => setData(x => ({ ...x, [prop]: !x[prop] }));
+				const toggleShowMinimizedWindows = toggleProp("showMinimizedWindows");
 
 				function selectWindow(w) {
 					setData(x => ({ ...x, selectedWindows: [...x.selectedWindows, w] }))
@@ -279,13 +253,15 @@
 
 				const dataMemo = useMemo(() => ({
 						...data,
+						toggleShowMinimizedWindows,
 						toggleSelectWindow,
 						isWindowSelected,
 						hasSelectedWindows,
 						moveWindowsToSpace,
 					}),
-					[data, toggleSelectWindow, isWindowSelected, hasSelectedWindows, moveWindowsToSpace]
+					[data, toggleShowMinimizedWindows, toggleSelectWindow, isWindowSelected, hasSelectedWindows, moveWindowsToSpace]
 				);
+				window.globalStore = dataMemo
 				return <CtxGlobalStore.Provider value={dataMemo}>
 					{children}
 				</CtxGlobalStore.Provider>
@@ -293,13 +269,11 @@
 
 			function Contexts({ children }) {
 				return <>
-					<CtxSettingsProvider>
 					<CtxGlobalStoreProvider>
 					<ProviderWorkspaceForPotentialSwapping>
 					{children}
 					</ProviderWorkspaceForPotentialSwapping>
 					</CtxGlobalStoreProvider>
-					</CtxSettingsProvider>
 				</>
 			}
 
@@ -314,7 +288,6 @@
 			function App() {
 				const data = useFetchInitData(); // TODO: move into globalStore, so that can access e.g. all spaces, to e.g. move windows from current spaces to new one
 				const potentialSwappingWorkspaceData = useContextWorkspaceForPotentialSwapping();
-				const ctxSettings = useCtxSettings();
 				const globalStore = useCtxGlobalStore();
 
 				if (!data) return null;
@@ -328,8 +301,8 @@
 				return <div className={className}>
 				<h2></h2>
 				<div id="toggle--show-minimized-spaces">
-					<input type="checkbox" checked={ctxSettings.showMinimized} onChange={ctxSettings.toggleShowMinimized} />
-					<p>show minimized {ctxSettings.showMinimized}</p>
+					<input type="checkbox" checked={globalStore.showMinimizedWindows} onChange={globalStore.toggleShowMinimizedWindows} />
+					<p>show minimized {globalStore.showMinimizedWindows}</p>
 				</div>
 
 				<Workspace data={data} config={displayConfig} />
@@ -440,7 +413,6 @@
 			}
 
 			function Space({ space }) {
-				const ctxSettings = useCtxSettings();
 				const globalStore = useCtxGlobalStore();
 
 				function handleClick(e) {
@@ -454,7 +426,7 @@
 					<span>{space.index}</span>
 
 					<ul className="window-list">
-						{space.windows.map((w) => <Window key={w.id} window={w} showMinimized={ctxSettings.showMinimized} toggleSelectWindow={globalStore.toggleSelectWindow} isSelected={globalStore.isWindowSelected(w)} />)}
+						{space.windows.map((w) => <Window key={w.id} window={w} showMinimized={globalStore.showMinimizedWindows} toggleSelectWindow={globalStore.toggleSelectWindow} isSelected={globalStore.isWindowSelected(w)} />)}
 					</ul>
 				</div>
 			}
