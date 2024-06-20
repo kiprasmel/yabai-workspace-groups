@@ -179,9 +179,8 @@
 				useEffect(() => {
 					fetch("http://localhost:19420/api/v1/read?hierarchy")
 						.then((res) => res.json())
-						.then((data) => {
-							console.log({ data });
-							globalStore.setData(x => ({ ...x, workspace: { ...x.workspace, ...data } }))
+						.then((workspace) => {
+							globalStore.updateFromWorkspaceData(workspace)
 						})
 				}, []);
 			}
@@ -211,6 +210,23 @@
 						localStorage.setItem(CtxGlobalStoreLSKey, JSON.stringify(x))
 						return _setData(x)
 					}
+				}
+
+				function updateFromWorkspaceData(workspace) {
+					const { flatWindows } = getFlatWorkspaceData(workspace)
+
+					setData(x => ({
+						...x,
+						workspace: { ...x.workspace, ...workspace },
+						selectedWindows: data.selectedWindows.filter(sw => flatWindows.some(w => sw.id === w.id))
+					}))
+				}
+
+				function getFlatWorkspaceData(workspace) {
+					const flatSpaces = workspace.displays.flatMap(x => x.spaces)
+					const flatWindows = flatSpaces.flatMap(x => x.windows)
+					
+					return { flatSpaces, flatWindows }
 				}
 
 				const toggleProp = (prop) => () => setData(x => ({ ...x, [prop]: !x[prop] }));
@@ -249,8 +265,7 @@
 					// handle success
 					// handle failure
 
-					const flatSpaces = data.workspace.displays.flatMap(x => x.spaces)
-					const flatWindows = flatSpaces.flatMap(x => x.windows)
+					const { flatSpaces, flatWindows } = getFlatWorkspaceData(data.workspace)
 
 					/**
 					 * upon restoring the `data.selectedWindows` from localStorage,
@@ -332,8 +347,20 @@
 						isWindowSelected,
 						hasSelectedWindows,
 						moveWindowsToSpace,
+						getFlatWorkspaceData,
+						updateFromWorkspaceData,
 					}),
-					[data, setData, toggleShowMinimizedWindows, toggleSelectWindow, isWindowSelected, hasSelectedWindows, moveWindowsToSpace]
+					[
+						data,
+						setData,
+						toggleShowMinimizedWindows,
+						toggleSelectWindow,
+						isWindowSelected,
+						hasSelectedWindows,
+						moveWindowsToSpace,
+						getFlatWorkspaceData,
+						updateFromWorkspaceData,
+					]
 				);
 				window.globalStore = dataMemo
 				return <CtxGlobalStore.Provider value={dataMemo}>
