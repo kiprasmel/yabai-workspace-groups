@@ -256,7 +256,7 @@
 					// - remove from current space
 					// - add to new space
 					// - sync data (indicate @ window @ which space its at)
-					// - unmark as selected if success?
+					// - unmark as selected if success
 
 					// send to server to perform actual update
 
@@ -317,6 +317,11 @@
 					}
 
 					setData(x => ({ ...x, workspace: data.workspace }))
+
+					for (const w of windowsToMoveFixedRefs) {
+						unselectWindow(w)
+						undo.push(() => selectWindow(w))
+					}
 
 					const res = await fetch(`http://localhost:19420/api/v1/move-windows`, {
 						method: "POST",
