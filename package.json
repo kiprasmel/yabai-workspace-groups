@@ -1,0 +1,12 @@
+{
+  "name": "yabai-workspace-groups",
+  "version": "0.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:kiprasmel/yabai-workspace-groups.git",
+  "author": "Kipras Melnikovas <kipras@kipras.org> (http://kipras.org/)",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "cors": "2.8.5",
+    "express": "4.19.2"
+  }
+}

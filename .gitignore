@@ -2,3 +2,6 @@
 
 TODO.pdf
 
+node_modules
+*.log
+
