@@ -22,6 +22,7 @@ const execS = (cmd, extra) => execSync(cmd, { encoding: "utf-8", ...extra })
  * query params:
  * - id: unique name of the workspace
  * - forceOverwrite: if should write new data to an already existing workspace id
+ * - current: if instead of providing workspace data, should read current state & store that
 */
 app.post("/api/v1/store", async (req, res) => {
 	try {
@@ -37,7 +38,7 @@ app.post("/api/v1/store", async (req, res) => {
 		}
 
 		const wss = listWorkspaces()
-		const forceOverwrite = "forceOverwrite" in req.query && req.query.forceOverwrite !== "0"
+		const forceOverwrite = boolQueryParam(req, "forceOverwrite")
 
 		if (wss.includes(wsId) && !forceOverwrite) {
 			const msg = "provided workspace 'id' already exists, but 'forceOverwrite' query param was not provided."
@@ -45,15 +46,26 @@ app.post("/api/v1/store", async (req, res) => {
 		}
 
 		const data = req.body
-		console.log({data})
-		if (!data || Object.keys(data).length === 0) {
-			const msg = "no workspace data provided."
+		const hasData = data && Object.keys(data).length > 0;
+		const current = boolQueryParam(req, "current")
+		console.log({data, hasData, current})
+
+		if (!hasData && !current) {
+			const msg = "no workspace data provided. provide query param 'current' if want to store the current layout."
 			return res.status(400).json({ msg })
+		} else if (hasData && current) {
+			const msg = "both data and 'current' query param provided, choose only one."
+			return res.status(400).json({ msg })
+		} else if (hasData) {
+			storeWorkspace(data, wsId)
+			return res.status(200).json({ msg: "stored successfully, used *provided* data" })
+		} else if (current) {
+			const curr = JSON.parse(readWorkspace("current"))
+			storeWorkspace(curr, wsId)
+			return res.status(200).json({ msg: "stored successfully, used *current* data" })
+		} else {
+			throw new Error("impossible")
 		}
-
-		storeWorkspace(data, wsId)
-
-		return res.status(200).json({ msg: "stored successfully" })
 	} catch (err) {
 		console.error(err)
 		return res.status(500).json({ err })
@@ -63,6 +75,10 @@ app.post("/api/v1/store", async (req, res) => {
 function storeWorkspace(data, workspaceId) {
 	const filepath = path.join(ensureWorkspacesDir(), workspaceId)
 	fs.writeFileSync(filepath, JSON.stringify(data))
+}
+
+function boolQueryParam(req, param) {
+	return param in req.query && req.query[param] !== "0"
 }
 
 app.get("/api/v1/read", async (req, res) => {
